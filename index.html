@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>YouDub – Dub YouTube Videos in Any Language</title>
+
+    <!-- YouTube JS API + Sync Play Script -->
+    <script>
+        let player;
+
+        function onYouTubeIframeAPIReady() {
+            player = new YT.Player('ytplayer', {
+                events: {
+                    'onReady': function (event) {
+                        event.target.mute();       // force mute
+                        event.target.setVolume(0); // ensure volume is 0
+                    }
+                }
+            });
+        }
+
+        function playDubbedVersion() {
+            const audio = document.getElementById("dubAudio");
+            if (player && audio) {
+                player.playVideo();
+                audio.play();
+            }
+        }
+
+        // Load YouTube Iframe API
+        const tag = document.createElement('script');
+        tag.src = "https://www.youtube.com/iframe_api";
+        const firstScriptTag = document.getElementsByTagName('script')[0];
+        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+    </script>
+</head>
+<body>
+    <h1>YouDub – Dub YouTube Videos in Any Language</h1>
+
+    <!-- Upload Form -->
+    <form method="post">
+        <label for="url">YouTube URL:</label>
+        <input type="text" name="url" required value="{{ request.form.get('url', '') }}"><br><br>
+
+        <label for="language">Select Language:</label>
+        <select name="language" required>
+            {% set selected_language = request.form.get('language', '') %}
+            <option value="hi" {% if selected_language == 'hi' %}selected{% endif %}>Hindi</option>
+            <option value="te" {% if selected_language == 'te' %}selected{% endif %}>Telugu</option>
+            <option value="ta" {% if selected_language == 'ta' %}selected{% endif %}>Tamil</option>
+            <option value="kn" {% if selected_language == 'kn' %}selected{% endif %}>Kannada</option>
+            <option value="ml" {% if selected_language == 'ml' %}selected{% endif %}>Malayalam</option>
+            <option value="mr" {% if selected_language == 'mr' %}selected{% endif %}>Marathi</option>
+            <option value="gu" {% if selected_language == 'gu' %}selected{% endif %}>Gujarati</option>
+            <option value="bn" {% if selected_language == 'bn' %}selected{% endif %}>Bengali</option>
+            <option value="pa" {% if selected_language == 'pa' %}selected{% endif %}>Punjabi</option>
+            <option value="ur" {% if selected_language == 'ur' %}selected{% endif %}>Urdu</option>
+            <option value="en" {% if selected_language == 'en' %}selected{% endif %}>English</option>
+            <option value="es" {% if selected_language == 'es' %}selected{% endif %}>Spanish</option>
+            <option value="fr" {% if selected_language == 'fr' %}selected{% endif %}>French</option>
+            <option value="de" {% if selected_language == 'de' %}selected{% endif %}>German</option>
+            <option value="it" {% if selected_language == 'it' %}selected{% endif %}>Italian</option>
+            <option value="ru" {% if selected_language == 'ru' %}selected{% endif %}>Russian</option>
+            <option value="ja" {% if selected_language == 'ja' %}selected{% endif %}>Japanese</option>
+            <option value="ko" {% if selected_language == 'ko' %}selected{% endif %}>Korean</option>
+            <option value="zh" {% if selected_language == 'zh' %}selected{% endif %}>Chinese</option>
+            <option value="pt" {% if selected_language == 'pt' %}selected{% endif %}>Portuguese</option>
+        </select><br><br>
+
+        <button type="submit">Download & Dub</button>
+    </form>
+
+    {% if audio_path and video_url %}
+        <hr>
+        <h3>Dubbed Playback</h3>
+
+        {% set video_id = video_url.split('v=')[-1].split('&')[0] if 'v=' in video_url else video_url.split('/')[-1] %}
+
+        <!-- YouTube Embed -->
+        <iframe
+            id="ytplayer"
+            width="560"
+            height="315"
+            src="https://www.youtube.com/embed/{{ video_id }}?enablejsapi=1"
+            frameborder="0"
+            allow="autoplay; encrypted-media"
+            allowfullscreen>
+        </iframe><br><br>
+
+        <!-- Dubbed Audio -->
+        <audio id="dubAudio" controls>
+            <source src="{{ url_for('static', filename='output_dubbed_audio.mp3') }}" type="audio/mpeg">
+            Your browser does not support the audio element.
+        </audio><br><br>
+
+        <!-- Sync Play Button -->
+<button id="syncToggleBtn" onclick="togglePlayPause()">▶️ Play Dubbed Version</button>
+    {% endif %}
+</body>
+</html>
+
