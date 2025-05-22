@@ -6,7 +6,6 @@ attrs==25.3.0
 audioread==3.0.1
 beautifulsoup4==4.13.4
 blinker==1.9.0
-charset-normalizer @ file:///croot/charset-normalizer_1721748349566/work
 click==8.1.8
 decorator==5.2.1
 deep-translator==1.11.4
