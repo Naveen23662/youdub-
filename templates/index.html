@@ -1,44 +1,54 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>YouDub – Translate & Dub Your YouTube Video</title>
+    <title>YouDub – Translate & Dub Your YouTube Video</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 40px;
+            max-width: 600px;
+            margin: auto;
+        }
+        h1 {
+            font-size: 28px;
+            color: #333;
+        }
+        label, select, input, button {
+            display: block;
+            width: 100%;
+            margin-top: 15px;
+            font-size: 16px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 12px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
 </head>
 <body>
-  <h2>🎙️ YouDub – Translate & Dub Your YouTube Video</h2>
+    <h1>🎙️ YouDub</h1>
+    <p>Translate and dub any YouTube video into your preferred language.</p>
 
-  <form method="POST" action="/download_and_dub">
-    <label>YouTube URL:</label><br>
-    <input type="text" name="url" placeholder="https://www.youtube.com/watch?v=..." size="60" required><br><br>
+    <form method="POST" action="/download_and_dub">
+        <label for="url">YouTube Video URL:</label>
+        <input type="text" name="url" id="url" required placeholder="https://www.youtube.com/watch?v=..." />
 
-    <label>Choose Target Language:</label><br>
-    <select name="language" required>
-      <!-- 10 Indian Languages -->
-      <option value="hi">Hindi</option>
-      <option value="te">Telugu</option>
-      <option value="ta">Tamil</option>
-      <option value="kn">Kannada</option>
-      <option value="ml">Malayalam</option>
-      <option value="mr">Marathi</option>
-      <option value="gu">Gujarati</option>
-      <option value="pa">Punjabi</option>
-      <option value="bn">Bengali</option>
-      <option value="ur">Urdu</option>
+        <label for="language">Select Target Language:</label>
+        <select name="language" id="language" required>
+            {% for lang in languages %}
+                <option value="{{ lang }}">{{ lang }}</option>
+            {% endfor %}
+        </select>
 
-      <!-- 10 International Languages -->
-      <option value="en">English</option>
-      <option value="fr">French</option>
-      <option value="es">Spanish</option>
-      <option value="de">German</option>
-      <option value="it">Italian</option>
-      <option value="ja">Japanese</option>
-      <option value="ko">Korean</option>
-      <option value="ru">Russian</option>
-      <option value="zh">Chinese</option>
-      <option value="pt">Portuguese</option>
-    </select><br><br>
-
-    <button type="submit">🎧 Download & Dub</button>
-  </form>
+        <button type="submit">🎧 Download & Dub</button>
+    </form>
 </body>
 </html>
 
