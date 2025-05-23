@@ -63,4 +63,5 @@ wheel==0.45.1
 yarl==1.20.0
 yt-dlp==2025.4.30
 gunicorn
+pytube==15.0.0
 
