@@ -3,7 +3,7 @@ import os
 
 app = Flask(__name__)
 
-# Supported languages dictionary (you can expand this list)
+# All 20 supported languages
 LANGUAGES = {
     "en": "English",
     "hi": "Hindi",
@@ -27,6 +27,27 @@ LANGUAGES = {
     "ar": "Arabic"
 }
 
+# Setup OpenAI key from environment
+import openai
+openai.api_key = os.environ.get("OPENAI_API_KEY")
+
+# Transcribe audio using Whisper
+def transcribe_audio(file_path):
+    with open(file_path, "rb") as audio_file:
+        transcript = openai.Audio.transcribe("whisper-1", audio_file)
+        return transcript["text"]
+
+# Translate using ChatGPT
+def translate_text(text, target_lang):
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "system", "content": f"Translate this to {target_lang}"},
+            {"role": "user", "content": text}
+        ]
+    )
+    return response['choices'][0]['message']['content']
+
 @app.route("/")
 def home():
     return "YouDub is running!"
@@ -34,10 +55,8 @@ def home():
 @app.route("/dub", methods=["POST"])
 def dub_video():
     try:
-        # ✅ Import inside route to save memory
         from pytube import YouTube
 
-        # ✅ Get URL and language from request
         url = request.json.get("url")
         lang_code = request.json.get("lang")
 
@@ -51,10 +70,17 @@ def dub_video():
         audio_stream = yt.streams.filter(only_audio=True).first()
         audio_path = audio_stream.download(filename="audio.mp4")
 
-        # ✅ Placeholder - you can add translation/dubbing here
+        # Step 1: Transcribe
+        transcript = transcribe_audio(audio_path)
+
+        # Step 2: Translate
+        translated_text = translate_text(transcript, LANGUAGES[lang_code])
+
         return jsonify({
-            "message": "Audio downloaded successfully",
+            "message": "Audio downloaded and translated",
             "language": LANGUAGES[lang_code],
+            "transcript": transcript,
+            "translation": translated_text,
             "file": audio_path
         })
 
