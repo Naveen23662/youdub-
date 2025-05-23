@@ -1,73 +1,67 @@
-from flask import Flask, request, render_template, send_file
+from flask import Flask, request, jsonify
 import os
-from pytube import YouTube
-import whisper
-from deep_translator import GoogleTranslator
-import edge_tts
-import asyncio
-from uuid import uuid4
 
 app = Flask(__name__)
-model = whisper.load_model("base")
 
+# Supported languages dictionary (you can expand this list)
 LANGUAGES = {
-    "Hindi": "hi",
-    "Telugu": "te",
-    "Tamil": "ta",
-    "Kannada": "kn",
-    "Malayalam": "ml",
-    "Marathi": "mr",
-    "Gujarati": "gu",
-    "Punjabi": "pa",
-    "Bengali": "bn",
-    "Urdu": "ur",
-    "English": "en",
-    "Spanish": "es",
-    "French": "fr",
-    "German": "de",
-    "Italian": "it",
-    "Portuguese": "pt",
-    "Japanese": "ja",
-    "Korean": "ko",
-    "Chinese": "zh",
-    "Russian": "ru"
+    "en": "English",
+    "hi": "Hindi",
+    "te": "Telugu",
+    "ta": "Tamil",
+    "kn": "Kannada",
+    "ml": "Malayalam",
+    "gu": "Gujarati",
+    "mr": "Marathi",
+    "bn": "Bengali",
+    "pa": "Punjabi",
+    "fr": "French",
+    "es": "Spanish",
+    "de": "German",
+    "it": "Italian",
+    "pt": "Portuguese",
+    "ru": "Russian",
+    "ja": "Japanese",
+    "ko": "Korean",
+    "zh": "Chinese",
+    "ar": "Arabic"
 }
 
-@app.route('/')
-def index():
-    return render_template('index.html', languages=LANGUAGES)
+@app.route("/")
+def home():
+    return "YouDub is running!"
 
-@app.route('/download_and_dub', methods=['POST'])
-def download_and_dub():
-    url = request.form['url']
-    target_lang = request.form['language']
-    lang_code = LANGUAGES.get(target_lang)
+@app.route("/dub", methods=["POST"])
+def dub_video():
+    try:
+        # ✅ Import inside route to save memory
+        from pytube import YouTube
 
-    # 1. Download YouTube Audio
-    yt = YouTube(url)
-    audio_stream = yt.streams.filter(only_audio=True).first()
-    input_file = f"input_{uuid4().hex}.mp4"
-    audio_stream.download(filename=input_file)
+        # ✅ Get URL and language from request
+        url = request.json.get("url")
+        lang_code = request.json.get("lang")
 
-    # 2. Transcribe Audio
-    result = model.transcribe(input_file)
-    original_text = result['text']
+        if not url or not lang_code:
+            return jsonify({"error": "Missing 'url' or 'lang'"}), 400
 
-    # 3. Translate Text
-    translated_text = GoogleTranslator(source='auto', target=lang_code).translate(original_text)
+        if lang_code not in LANGUAGES:
+            return jsonify({"error": f"Unsupported language '{lang_code}'"}), 400
 
-    # 4. Generate Audio using Edge TTS
-    output_file = f"dubbed_{uuid4().hex}.mp3"
+        yt = YouTube(url)
+        audio_stream = yt.streams.filter(only_audio=True).first()
+        audio_path = audio_stream.download(filename="audio.mp4")
 
-    async def synthesize(text, file_path):
-        tts = edge_tts.Communicate(text, voice="hi-IN-MadhurNeural")  # You can choose voice based on lang_code
-        await tts.save(file_path)
+        # ✅ Placeholder - you can add translation/dubbing here
+        return jsonify({
+            "message": "Audio downloaded successfully",
+            "language": LANGUAGES[lang_code],
+            "file": audio_path
+        })
 
-    asyncio.run(synthesize(translated_text, output_file))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
-    # 5. Serve dubbed audio file
-    return send_file(output_file, as_attachment=True)
-
-if __name__ == '__main__':
-    app.run(debug=True)
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(debug=False, host="0.0.0.0", port=port)
 
