@@ -1,19 +1,19 @@
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify
 import os
 import asyncio
 import edge_tts
 import openai
 
-# Load OpenAI key from environment variable
+# Load OpenAI key
 openai.api_key = os.environ.get("OPENAI_API_KEY")
 
-app = Flask(__name__, static_url_path='/static', static_folder='static')
+app = Flask(__name__, static_url_path="/static", static_folder="static")
 
-# Ensure static directory exists
+# Create static directory if it doesn't exist
 if not os.path.exists("static"):
     os.makedirs("static")
 
-# Supported languages (20 total)
+# Supported languages
 LANGUAGES = {
     "en": "English", "hi": "Hindi", "te": "Telugu", "ta": "Tamil", "kn": "Kannada",
     "ml": "Malayalam", "gu": "Gujarati", "mr": "Marathi", "bn": "Bengali", "pa": "Punjabi",
@@ -21,7 +21,7 @@ LANGUAGES = {
     "ru": "Russian", "ja": "Japanese", "ko": "Korean", "zh": "Chinese", "ar": "Arabic"
 }
 
-# Edge TTS voice map
+# Edge TTS voices
 VOICE_MAP = {
     "en": "en-US-GuyNeural", "hi": "hi-IN-MadhurNeural", "te": "te-IN-MohanNeural",
     "ta": "ta-IN-ValluvarNeural", "kn": "kn-IN-GaganNeural", "ml": "ml-IN-MidhunNeural",
@@ -32,11 +32,13 @@ VOICE_MAP = {
     "zh": "zh-CN-YunhaoNeural", "ar": "ar-EG-SherifNeural"
 }
 
+# Transcription function
 def transcribe_audio(file_path):
     with open(file_path, "rb") as audio_file:
         transcript = openai.Audio.transcribe("whisper-1", audio_file)
         return transcript["text"]
 
+# Translation function
 def translate_text(text, target_language):
     response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
@@ -47,6 +49,7 @@ def translate_text(text, target_language):
     )
     return response["choices"][0]["message"]["content"]
 
+# TTS dubbing function
 async def generate_dubbed_audio(text, lang_code, output_file):
     voice = VOICE_MAP.get(lang_code, "en-US-GuyNeural")
     communicate = edge_tts.Communicate(text, voice)
@@ -54,7 +57,7 @@ async def generate_dubbed_audio(text, lang_code, output_file):
 
 @app.route("/")
 def home():
-    return "YouDub API is running!"
+    return "YouDub API is running"
 
 @app.route("/dub", methods=["POST"])
 def dub_video():
@@ -69,21 +72,24 @@ def dub_video():
         if lang_code not in LANGUAGES:
             return jsonify({"error": f"Unsupported language '{lang_code}'"}), 400
 
-        # Step 1: Download audio
+        # Download YouTube audio
         yt = YouTube(url)
-        audio_stream = yt.streams.filter(only_audio=True).first()
-        audio_path = audio_stream.download(filename="audio.mp4")
+        stream = yt.streams.filter(only_audio=True).first()
+        audio_path = stream.download(filename="audio.mp4")
 
-        # Step 2: Transcribe
+        # Transcribe
         transcript = transcribe_audio(audio_path)
 
-        # Step 3: Translate
+        # Translate
         translated_text = translate_text(transcript, LANGUAGES[lang_code])
 
-        # Step 4: Generate dubbed audio
+        # Generate & move dubbed file to static/
         filename = f"dubbed_{lang_code}.mp3"
+        output_path = filename
         static_path = os.path.join("static", filename)
-        asyncio.run(generate_dubbed_audio(translated_text, lang_code, static_path))
+
+        asyncio.run(generate_dubbed_audio(translated_text, lang_code, output_path))
+        os.rename(output_path, static_path)
 
         return jsonify({
             "message": "Dubbed successfully",
@@ -97,6 +103,5 @@ def dub_video():
         return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(debug=False, host="0.0.0.0", port=port)
+    port =
 
