@@ -1,69 +1,42 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 import os
 import asyncio
 import edge_tts
 import openai
 
-# Set your OpenAI API key from environment variable
+# Load OpenAI key from environment variable
 openai.api_key = os.environ.get("OPENAI_API_KEY")
 
-app = Flask(__name__)
+app = Flask(__name__, static_url_path='/static', static_folder='static')
 
-# Supported languages (10 Indian + 10 International)
+# Ensure static directory exists
+if not os.path.exists("static"):
+    os.makedirs("static")
+
+# Supported languages (20 total)
 LANGUAGES = {
-    "en": "English",
-    "hi": "Hindi",
-    "te": "Telugu",
-    "ta": "Tamil",
-    "kn": "Kannada",
-    "ml": "Malayalam",
-    "gu": "Gujarati",
-    "mr": "Marathi",
-    "bn": "Bengali",
-    "pa": "Punjabi",
-    "fr": "French",
-    "es": "Spanish",
-    "de": "German",
-    "it": "Italian",
-    "pt": "Portuguese",
-    "ru": "Russian",
-    "ja": "Japanese",
-    "ko": "Korean",
-    "zh": "Chinese",
-    "ar": "Arabic"
+    "en": "English", "hi": "Hindi", "te": "Telugu", "ta": "Tamil", "kn": "Kannada",
+    "ml": "Malayalam", "gu": "Gujarati", "mr": "Marathi", "bn": "Bengali", "pa": "Punjabi",
+    "fr": "French", "es": "Spanish", "de": "German", "it": "Italian", "pt": "Portuguese",
+    "ru": "Russian", "ja": "Japanese", "ko": "Korean", "zh": "Chinese", "ar": "Arabic"
 }
 
-# Voice map for Edge TTS
+# Edge TTS voice map
 VOICE_MAP = {
-    "en": "en-US-GuyNeural",
-    "hi": "hi-IN-MadhurNeural",
-    "te": "te-IN-MohanNeural",
-    "ta": "ta-IN-ValluvarNeural",
-    "kn": "kn-IN-GaganNeural",
-    "ml": "ml-IN-MidhunNeural",
-    "gu": "gu-IN-NiranjanNeural",
-    "mr": "mr-IN-ManoharNeural",
-    "bn": "bn-IN-TanishNeural",
-    "pa": "pa-IN-BaljeetNeural",
-    "fr": "fr-FR-HenriNeural",
-    "es": "es-ES-AlvaroNeural",
-    "de": "de-DE-ConradNeural",
-    "it": "it-IT-GianniNeural",
-    "pt": "pt-PT-DuarteNeural",
-    "ru": "ru-RU-DmitryNeural",
-    "ja": "ja-JP-KeitaNeural",
-    "ko": "ko-KR-InJoonNeural",
-    "zh": "zh-CN-YunhaoNeural",
-    "ar": "ar-EG-SherifNeural"
+    "en": "en-US-GuyNeural", "hi": "hi-IN-MadhurNeural", "te": "te-IN-MohanNeural",
+    "ta": "ta-IN-ValluvarNeural", "kn": "kn-IN-GaganNeural", "ml": "ml-IN-MidhunNeural",
+    "gu": "gu-IN-NiranjanNeural", "mr": "mr-IN-ManoharNeural", "bn": "bn-IN-TanishNeural",
+    "pa": "pa-IN-BaljeetNeural", "fr": "fr-FR-HenriNeural", "es": "es-ES-AlvaroNeural",
+    "de": "de-DE-ConradNeural", "it": "it-IT-GianniNeural", "pt": "pt-PT-DuarteNeural",
+    "ru": "ru-RU-DmitryNeural", "ja": "ja-JP-KeitaNeural", "ko": "ko-KR-InJoonNeural",
+    "zh": "zh-CN-YunhaoNeural", "ar": "ar-EG-SherifNeural"
 }
 
-# Step 1: Transcribe audio
 def transcribe_audio(file_path):
     with open(file_path, "rb") as audio_file:
         transcript = openai.Audio.transcribe("whisper-1", audio_file)
         return transcript["text"]
 
-# Step 2: Translate text
 def translate_text(text, target_language):
     response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
@@ -74,7 +47,6 @@ def translate_text(text, target_language):
     )
     return response["choices"][0]["message"]["content"]
 
-# Step 3: Generate dubbed audio with Edge TTS
 async def generate_dubbed_audio(text, lang_code, output_file):
     voice = VOICE_MAP.get(lang_code, "en-US-GuyNeural")
     communicate = edge_tts.Communicate(text, voice)
@@ -97,27 +69,28 @@ def dub_video():
         if lang_code not in LANGUAGES:
             return jsonify({"error": f"Unsupported language '{lang_code}'"}), 400
 
-        # Download YouTube audio
+        # Step 1: Download audio
         yt = YouTube(url)
         audio_stream = yt.streams.filter(only_audio=True).first()
         audio_path = audio_stream.download(filename="audio.mp4")
 
-        # Transcribe
+        # Step 2: Transcribe
         transcript = transcribe_audio(audio_path)
 
-        # Translate
+        # Step 3: Translate
         translated_text = translate_text(transcript, LANGUAGES[lang_code])
 
-        # Generate dubbed voice
-        dubbed_path = f"dubbed_{lang_code}.mp3"
-        asyncio.run(generate_dubbed_audio(translated_text, lang_code, dubbed_path))
+        # Step 4: Generate dubbed audio
+        filename = f"dubbed_{lang_code}.mp3"
+        static_path = os.path.join("static", filename)
+        asyncio.run(generate_dubbed_audio(translated_text, lang_code, static_path))
 
         return jsonify({
             "message": "Dubbed successfully",
             "language": LANGUAGES[lang_code],
             "transcript": transcript,
             "translation": translated_text,
-            "dubbed_file": dubbed_path
+            "download_url": f"https://youdub.onrender.com/static/{filename}"
         })
 
     except Exception as e:
